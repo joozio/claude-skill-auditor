@@ -207,6 +207,10 @@ The scanner is a single bash script (~260 lines) that:
 8. Audits declared tool permissions
 9. Calculates a cumulative risk score and outputs findings
 
+## Related
+
+See also: [claude-skills](https://github.com/joozio/claude-skills) — battle-tested skill collection for Claude Code
+
 ## Threat Database
 
 [THREAT-DB.md](THREAT-DB.md) documents known threat patterns and the incident history behind this tool.
@@ -222,3 +226,11 @@ Consult THREAT-DB.md when a scan returns MEDIUM or HIGH risk and you want to und
 ## License
 
 MIT
+
+---
+
+Built by [Pawel Jozefiak](https://thoughts.jock.pl). I write about AI agents, automation, and building in public at **[Digital Thoughts](https://thoughts.jock.pl)** (1,000+ subscribers).
+
+Go deeper: [Claude Code Workshop](https://wiz.jock.pl/store/claude-code-workshop) ($29)
+
+[Subscribe to the newsletter](https://thoughts.jock.pl/subscribe) | [More projects](https://github.com/joozio) | [@joozio](https://x.com/joozio)
